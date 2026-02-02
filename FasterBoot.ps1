@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 ===============================================================================
   FASTER BOOT - OPTIMISEUR INTELLIGENT DE DÉMARRAGE
@@ -315,7 +315,7 @@ function Get-BootBottlenecks {
 
     if ($bottlenecks.Count -eq 0) {
         Write-Host ""
-        Write-Host "  Aucun goulot d'étranglement détecté dans les logs." -ForegroundColor Green
+        Write-Host '  Aucun goulot d''etranglement detecte dans les logs.' -ForegroundColor Green
         Write-Host "  (Le boot est déjà performant ou les logs sont vides)" -ForegroundColor Gray
         return @()
     }
@@ -494,12 +494,15 @@ function Invoke-SmartOptimization {
             $service = Get-Service -Name $svc.Name -ErrorAction SilentlyContinue
             if ($service -and $service.StartType -eq 'Automatic' -and $svc.Name -notin $protectedServices) {
                 if ($DryRun) {
-                    Write-Metric "  $($svc.Name)" "serait différé (lent: $($svc.AvgSec)s)" "ACTION"
+                    $svcName = $svc.Name; $svcAvg = $svc.AvgSec
+                    $svcMsg = 'serait differe (lent: ' + $svcAvg + 's)'
+                    Write-Metric ('  ' + $svcName) $svcMsg 'ACTION'
                 } elseif ($isAdmin) {
                     try {
                         Set-Service -Name $svc.Name -StartupType AutomaticDelayedStart
-                        Write-Metric "  $($svc.Name)" "différé (était lent: $($svc.AvgSec)s)" "GOOD"
-                        $actions += "Service différé: $($svc.Name) ($($svc.AvgSec)s)"
+                        $svcMsg = 'differe (etait lent: ' + $svcAvg + 's)'
+                        Write-Metric ('  ' + $svcName) $svcMsg 'GOOD'
+                        $actions += ('Service differe: ' + $svcName + ' (' + $svcAvg + 's)')
                     } catch {
                         Write-Metric "  $($svc.Name)" "échec" "BAD"
                     }
@@ -601,7 +604,7 @@ function Invoke-SmartOptimization {
 
     if ($applySystemTweaks) {
         Write-Host ""
-        Write-Host "  Réglages système (score boot justifie l'intervention) :" -ForegroundColor Yellow
+        Write-Host '  Reglages systeme (score boot justifie l''intervention) :' -ForegroundColor Yellow
 
         # Fast Startup
         if ($isAdmin) {
@@ -661,7 +664,7 @@ function Invoke-SmartOptimization {
 
     } else {
         Write-Host ""
-        Write-Host "  Réglages système : score suffisant, pas d'intervention nécessaire." -ForegroundColor Green
+        Write-Host '  Reglages systeme : score suffisant, pas d''intervention necessaire.' -ForegroundColor Green
         Write-Host "  (Utilisez -Force pour forcer les optimisations système)" -ForegroundColor Gray
     }
 
@@ -681,7 +684,7 @@ function Show-BootHistory {
 
     if (-not (Test-Path $historyFile)) {
         Write-Host ""
-        Write-Host "  Pas encore d'historique. Lancez FasterBoot plusieurs fois." -ForegroundColor Yellow
+        Write-Host '  Pas encore d''historique. Lancez FasterBoot plusieurs fois.' -ForegroundColor Yellow
         return
     }
 
@@ -721,9 +724,13 @@ function Show-BootHistory {
 
     Write-Host ""
     if ($avgSecond -lt $avgFirst * 0.9) {
-        Write-Metric "Tendance" "AMÉLIORATION ($([math]::Round($avgFirst - $avgSecond, 1))s plus rapide)" "GOOD"
+        $diff = [math]::Round($avgFirst - $avgSecond, 1)
+        $msg = 'AMELIORATION (' + $diff + 's plus rapide)'
+        Write-Metric 'Tendance' $msg 'GOOD'
     } elseif ($avgSecond -gt $avgFirst * 1.1) {
-        Write-Metric "Tendance" "DÉGRADATION ($([math]::Round($avgSecond - $avgFirst, 1))s plus lent)" "BAD"
+        $diff = [math]::Round($avgSecond - $avgFirst, 1)
+        $msg = 'DEGRADATION (' + $diff + 's plus lent)'
+        Write-Metric 'Tendance' $msg 'BAD'
     } else {
         Write-Metric "Tendance" "STABLE" "NEUTRAL"
     }
@@ -784,7 +791,7 @@ try {
 
         # Alerte si dégradation
         if ($bootSec -gt 90) {
-            $alert = "$(Get-Date) | ALERTE: Boot très lent ($bootSec sec)"
+            $alert = (Get-Date).ToString() + ' | ALERTE: Boot tres lent (' + $bootSec + ' sec)'
             $alert | Out-File -FilePath $alertFile -Append -Encoding UTF8
         }
     }
@@ -831,7 +838,7 @@ Remove-Item "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host ""
         Write-Host "  La surveillance va :" -ForegroundColor White
         Write-Host "    • Enregistrer le temps de boot à chaque démarrage" -ForegroundColor Gray
-        Write-Host "    • Détecter les nouveaux programmes qui s'ajoutent" -ForegroundColor Gray
+        Write-Host '    - Detecter les nouveaux programmes qui s''ajoutent' -ForegroundColor Gray
         Write-Host "    • Alerter si le boot dépasse 90 secondes" -ForegroundColor Gray
         Write-Host "    • Nettoyer les fichiers temporaires" -ForegroundColor Gray
     } catch {
@@ -845,10 +852,10 @@ Remove-Item "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
 
 Clear-Host
 Write-Host ""
-Write-Host "  ╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "  ║         FASTER BOOT - Optimiseur Intelligent            ║" -ForegroundColor Cyan
-Write-Host "  ║         Windows 10 & 11 - Version Universelle           ║" -ForegroundColor Cyan
-Write-Host "  ╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host '  ============================================================' -ForegroundColor Cyan
+Write-Host '       FASTER BOOT - Optimiseur Intelligent' -ForegroundColor Cyan
+Write-Host '       Windows 10 / 11 - Version Universelle' -ForegroundColor Cyan
+Write-Host '  ============================================================' -ForegroundColor Cyan
 
 $winVer = Get-WindowsVersion
 Write-Host ""
@@ -904,7 +911,7 @@ if ($AnalyseSeule) {
 } else {
     if ($actions -and $actions.Count -gt 0) {
         Write-Host "  $($actions.Count) optimisation(s) appliquée(s)." -ForegroundColor Green
-        Write-Host "  Redémarrez le PC, puis relancez FasterBoot pour mesurer l'amélioration." -ForegroundColor White
+        Write-Host '  Redemarrez le PC, puis relancez FasterBoot pour mesurer l''amelioration.' -ForegroundColor White
     } else {
         Write-Host "  Le système est déjà bien optimisé." -ForegroundColor Green
     }
@@ -912,7 +919,7 @@ if ($AnalyseSeule) {
     Write-Host ""
     Write-Host "  Conseil : installez la surveillance avec :" -ForegroundColor Gray
     Write-Host "    .\FasterBoot.ps1 -Surveiller" -ForegroundColor Gray
-    Write-Host "  Pour voir l'historique :" -ForegroundColor Gray
+    Write-Host '  Pour voir l''historique :' -ForegroundColor Gray
     Write-Host "    .\FasterBoot.ps1 -Historique" -ForegroundColor Gray
 }
 
