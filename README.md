@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/banner.png" alt="FasterBoot Banner" width="700"/>
-</p>
-
 <h1 align="center">FasterBoot</h1>
 
 <p align="center">
