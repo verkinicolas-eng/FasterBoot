@@ -44,6 +44,7 @@ FasterBoot reads this data and builds a **precise diagnostic** of what is slow o
 | **Tracking** | One-shot, fire and forget | Historical CSV with trend detection |
 | **Monitoring** | None | Scheduled task detects regressions & new startup intrusions |
 | **System tweaks** | Always applied | Only applied if boot score is C or worse |
+| **Continuous cleaning** | None or manual | 3-layer auto-clean: shutdown, idle, login |
 | **Safety** | Hope for the best | Protected whitelist, snapshot diff, full rollback script |
 
 ## Quick Start
@@ -87,17 +88,28 @@ Shows what **would** be changed, without touching anything.
 
 Applies targeted optimizations based on the diagnostic. Reboot, then run `-AnalyseSeule` again to measure the improvement.
 
-### 5. Monitor (recommended)
+### 5. Install automatic maintenance (recommended)
 
 ```powershell
 .\FasterBoot.ps1 -Surveiller
 ```
 
-Installs a scheduled task that:
-- Records boot time at every startup
-- Detects new programs sneaking into startup
-- Alerts if boot time exceeds 90 seconds
-- Cleans temp files
+Installs a monitoring task that records boot time at every startup, detects new programs sneaking into startup, and alerts if boot time exceeds 90 seconds.
+
+To also install the **3-layer automatic cleaning system**:
+
+```powershell
+# Run as Administrator
+.\FasterBoot-Install.ps1
+```
+
+This sets up:
+
+| Layer | Trigger | How it works |
+|-------|---------|-------------|
+| **Shutdown cleanup** | Every PC shutdown/restart | Runs inside the Windows shutdown process itself (like Windows Update). Cleans temp, browser caches, crash dumps, old prefetch, DNS cache, thumbnails. Next boot loads a clean system. |
+| **Idle cleanup** | 10 min without keyboard/mouse | Runs silently in the background. **Stops immediately** if you come back. Resumes when you leave again. Zero impact on usage. |
+| **Startup guard** | Every login | Detects and removes programs that sneaked back into startup (e.g. after an update). |
 
 ### 6. Track over time
 
@@ -158,6 +170,32 @@ Shows an ASCII bar chart of boot time history with trend detection (improving / 
 | **D** | ≤ 90s | System tweaks applied automatically |
 | **F** | > 90s | System tweaks applied + alert generated |
 
+## Automatic Cleaning (3 layers)
+
+FasterBoot doesn't just optimize once — it keeps your system clean continuously through three complementary layers:
+
+### Layer 1: Shutdown Cleanup (GPO Shutdown Script)
+Runs **inside the Windows shutdown process** itself, just like Windows Update installs during shutdown. Every time you shut down or restart, the system is cleaned before the next boot.
+
+**What it cleans:**
+- User and system temp files
+- Browser HTTP caches (Chrome, Edge, Firefox, Brave)
+- DNS cache
+- Windows thumbnail cache
+- Crash dumps
+- Old Prefetch entries (> 30 days)
+- Windows Update download cache (> 14 days)
+- Delivery Optimization cache
+- Recycle bin
+
+### Layer 2: Idle Cleanup
+Triggers after **10 minutes of inactivity** (no keyboard/mouse). If you come back, it **stops immediately**. When you leave again, it **resumes**. You never notice it running.
+
+### Layer 3: Startup Guard
+Runs at every login. Detects programs that added themselves back to startup (common after software updates) and removes them. Logs every intrusion to `alertes.txt`.
+
+---
+
 ## What Gets Optimized
 
 ### Startup Programs
@@ -197,7 +235,9 @@ Shows an ASCII bar chart of boot time history with trend detection (improving / 
 
 ```
 FasterBoot/
-├── FasterBoot.ps1              # Main script (all-in-one)
+├── FasterBoot.ps1              # Main script (diagnostic + optimization)
+├── FasterBoot-Shutdown.ps1     # Pre-shutdown cleanup script
+├── FasterBoot-Install.ps1      # Installs all 3 cleaning layers
 ├── AnnulerOptimisations.ps1    # Full rollback script
 ├── LICENSE                     # Apache 2.0
 ├── README.md                   # This file
@@ -212,6 +252,7 @@ When FasterBoot runs, it creates a `FasterBoot_Data/` folder:
 FasterBoot_Data/
 ├── boot_history.csv            # Boot time history
 ├── startup_snapshot.json       # Startup state snapshot
+├── shutdown_log.txt            # Shutdown cleanup log
 ├── alertes.txt                 # Degradation alerts
 └── log.txt                     # Action log
 ```

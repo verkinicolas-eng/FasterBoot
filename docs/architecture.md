@@ -85,6 +85,64 @@ A scheduled task (`FasterBoot_Monitor`) runs at logon and weekly:
 3. Writes alerts to `alertes.txt` if boot > 90s or new startup entries
 4. Cleans temp files
 
+### Module 7: 3-Layer Automatic Cleaning System
+
+Installed via `FasterBoot-Install.ps1`. Three complementary cleaning layers keep the system fast continuously.
+
+#### Layer 1: Shutdown Cleanup (GPO Shutdown Script)
+
+**Mechanism**: Windows Group Policy Shutdown Script — executes inside the Windows shutdown process itself, like Windows Update.
+
+**Registry keys**:
+- `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Shutdown`
+- `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Shutdown`
+
+**File location**: `C:\Windows\System32\GroupPolicy\Machine\Scripts\Shutdown\FasterBoot-Shutdown.ps1`
+
+**What it cleans**:
+| Target | Details |
+|--------|---------|
+| User temp (`$env:TEMP`) | All files |
+| System temp (`C:\Windows\Temp`) | All files |
+| Browser HTTP caches | Chrome, Edge, Firefox, Brave `Cache\Cache_Data` |
+| DNS cache | `ipconfig /flushdns` |
+| Thumbnail cache | `$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache_*` |
+| Crash dumps | `C:\Windows\Minidump`, `C:\Windows\MEMORY.DMP` |
+| Old Prefetch | Files older than 30 days in `C:\Windows\Prefetch` |
+| Windows Update cache | `C:\Windows\SoftwareDistribution\Download` files > 14 days |
+| Delivery Optimization | `C:\Windows\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache` |
+| Recycle bin | `Clear-RecycleBin -Force` |
+
+**Impact**: Next boot loads a clean, lighter system. No user interaction needed.
+
+#### Layer 2: Idle Cleanup
+
+**Mechanism**: Windows Task Scheduler with idle trigger conditions.
+
+**Settings**:
+- `RunOnlyIfIdle = $true`
+- `IdleDuration = PT10M` (triggers after 10 min without keyboard/mouse)
+- `WaitTimeout = PT8H` (waits up to 8 hours for idle)
+- `StopOnIdleEnd = $true` (stops immediately if user returns)
+- `RestartOnIdle = $true` (resumes when user leaves again)
+
+**Script**: Same `FasterBoot-Shutdown.ps1` — full cleanup during idle time.
+
+**Impact**: Zero impact on usage. Runs silently, stops instantly when needed.
+
+#### Layer 3: Startup Guard
+
+**Mechanism**: Scheduled task at logon + weekly Monday 8:00.
+
+**What it does**:
+1. Records boot time from Event ID 100 to `boot_history.csv`
+2. Compares current `HKCU\...\Run` entries against `startup_snapshot.json`
+3. Logs new intrusions to `alertes.txt`
+4. Generates alert if boot time > 90 seconds
+5. Cleans temp files
+
+**Impact**: Catches programs sneaking back into startup after updates.
+
 ## Security Model
 
 ### Protected Whitelists
