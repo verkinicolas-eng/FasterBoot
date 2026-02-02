@@ -1,0 +1,16 @@
+# FasterBoot generated data (user-specific)
+FasterBoot_Data/
+FasterBoot_Monitor.ps1
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
